@@ -15,4 +15,13 @@ internal partial class Program
         //    Console.WriteLine(data.ToString("dd/MMM/yyyy"));
         //}
     }
+
+    private static List<FolhaDePonto> GetSetupData()
+    {
+        List<FolhaDePonto> output = new()
+        {
+        new() 
+        };
+        return output;
+    }
 }
