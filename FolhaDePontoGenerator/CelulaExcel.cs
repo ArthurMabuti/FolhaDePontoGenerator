@@ -9,4 +9,9 @@ internal class CelulaExcel
         Coluna = coluna;
         Linha = linha;
     }
+
+    public override string? ToString()
+    {
+        return $"{Coluna}{Linha}";
+    }
 }
