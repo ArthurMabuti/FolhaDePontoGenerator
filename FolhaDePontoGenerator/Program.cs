@@ -9,7 +9,8 @@ internal partial class Program
     private static async Task Main(string[] args)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        FileInfo file = new(@"C:\Users\Arthur\Desktop\Excel.xlsx");
+        //FileInfo file = new(@"C:\Users\Arthur\Desktop\Excel.xlsx");
+        FileInfo file = new(@"C:\Users\pereira.arthur.ext\Desktop\Excel.xlsx");
 
         await GerarPlanilha(file);
     }
@@ -27,9 +28,10 @@ internal partial class Program
         ImprimirDatas(ws, dataInicial);
         ImprimirTracos(ws);
         ImprimirFimDeSemana(ws);
+        ImprimirFolga(ws);
         ImprimirHorarios(ws);
 
-        var range = ws.Cells["A1:I31"];
+        var range = ws.Cells[$"A1:I{CountLinhas(ws)}"];
         FormatarCelulas(range);
         await package.SaveAsync();
     }
@@ -49,6 +51,8 @@ internal partial class Program
         while (!string.IsNullOrEmpty(rangeDiaSemana.Value?.ToString()))
         {
             CelulaExcel celulaDiaSemana = GerarCelula(rangeDiaSemana);
+
+            Console.WriteLine(rangeDiaSemana.StyleName.ToString());
 
             if (!FimDeSemana(rangeDiaSemana))
             {
@@ -78,7 +82,6 @@ internal partial class Program
         {
             ws.Cells[row, col].Value = data.ToString("dd/MMM");
             ws.Cells[row, col + 1].Value = PrimeiraLetraMaiscula(data.ToString("dddd"));
-            Console.WriteLine(data.ToString("dd/MMM"));
             row++;
         }
     }
@@ -90,7 +93,7 @@ internal partial class Program
 
         //Criar método que identifique as últimas colunas e imprima os traços
 
-        while(row != 32)
+        while(row <= CountLinhas(ws))
         {
             ws.Cells[row, col].Value = "-";
             ws.Cells[row, col + 1].Value = "-";
@@ -122,20 +125,62 @@ internal partial class Program
 
     private static void ImprimirFimDeSemana(ExcelWorksheet ws)
     {
-        int row = 2;
-        int col = 2;
-        while (!string.IsNullOrEmpty(ws.Cells[row, col].Value?.ToString()))
+        CelulaExcel celula = new('B', 2);
+        while (!string.IsNullOrEmpty(ws.Cells[$"{celula}"].Value?.ToString()))
         {
-            if (FimDeSemana(ws.Cells[row, col]))
+            PintarCelulaDeCinza(ws, celula, FimDeSemana(ws.Cells[$"{celula}"]));
+        }
+    }
+
+    private static void PintarCelulaDeCinza(ExcelWorksheet ws, CelulaExcel celula, bool folga)
+    {
+        if (folga)
+        {
+            char colunaInicial = celula.Coluna;
+            celula.Coluna = 'B';
+            while (celula.Coluna <= 'I')
             {
-                while (col != 10)
-                {
-                    ws.Cells[row, col].Style.Fill.SetBackground(Color.FromArgb(128, 128, 128));
-                    col++;
-                }
-                col = 2;
+                ws.Cells[$"{celula}"].Style.Fill.SetBackground(Color.FromArgb(128, 128, 128));
+                celula.Coluna++;
             }
-            row++;
+            celula.Coluna = colunaInicial;
+        }
+        celula.Linha++;
+    }
+    
+    private static bool Feriado(ExcelRange range, string[] feriados)
+    {
+        foreach(string feriado in feriados)
+            if (range.Value?.ToString() == feriado)
+                return true;
+        return false;
+    }
+
+    private static string[]? DiasNaoTrabalhados()
+    {
+        Console.WriteLine("Houve folgas ou feriados no período trabalhado? Excluindo fins de semana. (S - Sim | N - Não)");
+        string houveFeriado = Console.ReadLine()!;
+
+        if (houveFeriado.ToLower() == "s")
+        {
+            Console.WriteLine("Quais dias não foram trabalhados? (Ex: 15/nov, 20/nov, etc)");
+            string[] diasNaoTrabalhados = Console.ReadLine()!.Split(", ");
+
+            return diasNaoTrabalhados;
+        }
+        string[] vazio = Array.Empty<string>();
+        return vazio;
+    }
+
+    private static void ImprimirFolga(ExcelWorksheet ws)
+    {
+        CelulaExcel celulaFolga = new('A', 2);
+        if(DiasNaoTrabalhados()!.Length != 0)
+        {
+            while (!string.IsNullOrEmpty(ws.Cells[$"{celulaFolga}"].Value?.ToString()))
+            {
+                PintarCelulaDeCinza(ws, celulaFolga, Feriado(ws.Cells[$"{celulaFolga}"], DiasNaoTrabalhados()!));
+            }
         }
     }
 
@@ -181,4 +226,19 @@ internal partial class Program
         }
         return $"{input[0].ToString().ToUpper()}{input.Substring(1)}";
     }
+
+    public static int CountLinhas(ExcelWorksheet ws)
+    {
+        int row = 2;
+        int col = 1;
+        int contadorLinhas = 1;
+
+        while (!string.IsNullOrEmpty(ws.Cells[row, col].Value?.ToString()))
+        {
+            row++;
+            contadorLinhas++;
+        }
+        return contadorLinhas;
+    }
+
 }
