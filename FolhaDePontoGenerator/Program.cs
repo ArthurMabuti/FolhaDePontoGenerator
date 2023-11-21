@@ -26,13 +26,14 @@ internal partial class Program
         ImprimirCabecalho(ws);
         DateTime dataInicial = DateTime.Parse("26/out");
         ImprimirDatas(ws, dataInicial);
-        ImprimirTracos(ws);
+        ImprimirHorarios(ws);
         ImprimirFimDeSemana(ws);
         ImprimirFolga(ws);
-        ImprimirHorarios(ws);
+        ImprimirTracos(ws);
 
         var range = ws.Cells[$"A1:I{CountLinhas(ws)}"];
         FormatarCelulas(range);
+
         await package.SaveAsync();
     }
 
@@ -51,8 +52,6 @@ internal partial class Program
         while (!string.IsNullOrEmpty(rangeDiaSemana.Value?.ToString()))
         {
             CelulaExcel celulaDiaSemana = GerarCelula(rangeDiaSemana);
-
-            Console.WriteLine(rangeDiaSemana.StyleName.ToString());
 
             if (!FimDeSemana(rangeDiaSemana))
             {
@@ -140,6 +139,8 @@ internal partial class Program
             celula.Coluna = 'B';
             while (celula.Coluna <= 'I')
             {
+                if(celula.Coluna != 'B')
+                    ws.Cells[$"{celula}"].Value = "";
                 ws.Cells[$"{celula}"].Style.Fill.SetBackground(Color.FromArgb(128, 128, 128));
                 celula.Coluna++;
             }
@@ -156,30 +157,76 @@ internal partial class Program
         return false;
     }
 
-    private static string[]? DiasNaoTrabalhados()
+    private static string[] ListaDeDias(bool afirmativo)
     {
-        Console.WriteLine("Houve folgas ou feriados no período trabalhado? Excluindo fins de semana. (S - Sim | N - Não)");
-        string houveFeriado = Console.ReadLine()!;
-
-        if (houveFeriado.ToLower() == "s")
+        if (afirmativo)
         {
-            Console.WriteLine("Quais dias não foram trabalhados? (Ex: 15/nov, 20/nov, etc)");
-            string[] diasNaoTrabalhados = Console.ReadLine()!.Split(", ");
+            Console.WriteLine("Informe os dias seguindo o exemplo ao lado. (Ex: 15/nov, 20/nov, etc)");
+            string[] listaDeDias = Console.ReadLine()!.Split(", ");
 
-            return diasNaoTrabalhados;
+            return listaDeDias;
         }
         string[] vazio = Array.Empty<string>();
         return vazio;
     }
 
+    private static string[]? DiasNaoTrabalhados()
+    {
+        Console.WriteLine("Houve folgas ou feriados no período trabalhado? Excluindo fins de semana. (S - Sim | N - Não)");
+        string houveFeriado = Console.ReadLine()!;
+
+        return ListaDeDias(houveFeriado.ToLower() == "s" ? true : false);
+    }
+    private static string[]? DiasComHorasExtras()
+    {
+        Console.WriteLine("Foi realizado horas extras no período trabalhado? (S - Sim | N - Não)");
+        string houveHoraExtra = Console.ReadLine()!;
+
+        return ListaDeDias(houveHoraExtra.ToLower() == "s" ? true : false);
+    }
+
+    private static List<HoraExtra> ListaDeHoraExtra()
+    {
+        List<HoraExtra> listaDeHorasExtras = new();
+        string[] dias = DiasComHorasExtras()!;
+        for(int i = 0; i < dias.Length; i++)
+        {
+            Console.WriteLine($"Quantas horas extras foram realizadas no dia {dias[i]}? (Ex: 1h, 30min, 4h15min");
+            string qtdHoraExtra = Console.ReadLine()!;
+            HoraExtra novaHoraExtra = new(dias[i], qtdHoraExtra);
+            listaDeHorasExtras.Add(novaHoraExtra);
+        }
+        return listaDeHorasExtras;
+    }
+
+    private static void ImprimirHoraExtra(ExcelWorksheet ws)
+    {
+        ExcelRange rangeDia = ws.Cells[2, 1];
+        List<HoraExtra> listaDeHorasExtras = ListaDeHoraExtra();
+        foreach(var horaExtra in listaDeHorasExtras)
+        {
+            while (!string.IsNullOrEmpty(rangeDia.Value?.ToString()))
+            {
+                CelulaExcel celulaDia = GerarCelula(rangeDia);
+
+                if (horaExtra.DiaTrabalhado == rangeDia.Value.ToString())
+                {
+                    string horaSaida = ws.Cells[$"F{celulaDia.Linha}"].Value.ToString();
+                    break;
+                }
+            }
+        }
+    }
+
     private static void ImprimirFolga(ExcelWorksheet ws)
     {
         CelulaExcel celulaFolga = new('A', 2);
-        if(DiasNaoTrabalhados()!.Length != 0)
+        string[] diasNaoTrabalhados = DiasNaoTrabalhados()!;
+        if(diasNaoTrabalhados.Length != 0)
         {
             while (!string.IsNullOrEmpty(ws.Cells[$"{celulaFolga}"].Value?.ToString()))
             {
-                PintarCelulaDeCinza(ws, celulaFolga, Feriado(ws.Cells[$"{celulaFolga}"], DiasNaoTrabalhados()!));
+                PintarCelulaDeCinza(ws, celulaFolga, Feriado(ws.Cells[$"{celulaFolga}"], diasNaoTrabalhados));
             }
         }
     }
