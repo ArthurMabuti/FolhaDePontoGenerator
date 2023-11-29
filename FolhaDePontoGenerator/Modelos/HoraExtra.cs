@@ -1,7 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace FolhaDePontoGenerator;
-internal class HoraExtra
+namespace FolhaDePontoGenerator.Modelos;
+public class HoraExtra
 {
     public string? DiaTrabalhado { get; set; }
     public string QtdHoras { get; set; }
@@ -12,12 +12,25 @@ internal class HoraExtra
         QtdHoras = qtdHoras;
     }
 
-    public static string IncrementarHora(string horaSaida, string horaExtra)
+    public static string IncrementarHoraExtra(string horaSaida, string horaExtra)
     {
-        return "";
+        string[] tempoSaida = horaSaida.Split(':');
+        int horaDeSaida = int.Parse(tempoSaida[0]);
+        int minutoDeSaida = int.Parse(tempoSaida[1]);
+
+        int[] tempoExtra = SeparadorHoraMinuto(horaExtra);
+
+        int horaIncrementada = horaDeSaida + tempoExtra[0];
+        int minutoIncrementado = minutoDeSaida + tempoExtra[1];
+        if (minutoIncrementado >= 60)
+        {
+            horaIncrementada++;
+            minutoIncrementado -= 60;
+        }
+        return $"{horaIncrementada}:{minutoIncrementado.ToString("D2")}";
     }
 
-    private int[] SeparadorHoraMinuto(string qtdHoras)
+    private static int[] SeparadorHoraMinuto(string qtdHoras)
     {
         if (HoraEMinuto(qtdHoras))
         {
@@ -44,7 +57,7 @@ internal class HoraExtra
     }
 
 
-    private bool HoraEMinuto(string? texto) => Regex.IsMatch(texto!, @"(\d{2}|\d{1})[hH]\d{2}(min|Min|MIN)");
-    private bool ApenasHora(string? texto) => Regex.IsMatch(texto!, @"(\d{2}|\d{1})[hH]");
-    private bool ApenasMinuto(string? texto) => Regex.IsMatch(texto!, @"\d{2}(min|Min|MIN)");
+    private static bool HoraEMinuto(string? texto) => Regex.IsMatch(texto!, @"(\d{2}|\d{1})[hH]\d{2}(min|Min|MIN)");
+    private static bool ApenasHora(string? texto) => Regex.IsMatch(texto!, @"(\d{2}|\d{1})[hH]");
+    private static bool ApenasMinuto(string? texto) => Regex.IsMatch(texto!, @"\d{2}(min|Min|MIN)");
 }
